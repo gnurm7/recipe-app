@@ -2,7 +2,6 @@
 using System.Data;
 using System.Data.SqlClient;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace SQLDENEME
 {
@@ -13,17 +12,19 @@ namespace SQLDENEME
         public Form2()
         {
             InitializeComponent();
-            
+
         }
 
-        
+
 
         private void Form2_Load(object sender, EventArgs e)
         {
-         
 
-            listele();
+
+            Tariflistele();
             KategorileriYukle();
+            TarifMalzemelistele();
+            // BirimTurleriniYukle();
             // ComboBox3'e sıralama kriterlerini ekleme
             comboBox3.Items.Add("Hazırlama Süresi (Artan)");
             comboBox3.Items.Add("Hazırlama Süresi (Azalan)");
@@ -34,7 +35,7 @@ namespace SQLDENEME
             comboBox3.SelectedIndexChanged += new EventHandler(comboBox3_SelectedIndexChanged);
             textBox7.TextChanged += new EventHandler(textBox7_TextChanged);
         }
-        public void listele()
+        public void Tariflistele()
         {
             try
             {
@@ -58,7 +59,35 @@ namespace SQLDENEME
             finally
             {
                 //if (conn.State == ConnectionState.Open)
-                    conn.Close();
+                conn.Close();
+            }
+        }
+
+        public void TarifMalzemelistele()
+        {
+            try
+            {
+                //conn.Open();
+
+                DataSet ds = new DataSet();
+                SqlDataAdapter ad = new SqlDataAdapter("select * from Tbl_TarifMalzeme_iliskisi", conn);
+                ad.Fill(ds);
+
+                dataGridView3.DataSource = ds.Tables[0];
+
+                dataGridView3.Columns[1].HeaderText = "Tarif ID";
+                dataGridView3.Columns[2].HeaderText = "Malzeme ID";
+                //   dataGridView3.Columns[3].HeaderText = "MalzemeMiktar";
+
+            }
+            catch (SqlException edf)
+            {
+                MessageBox.Show("Hata oluştu: " + edf.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                //if (conn.State == ConnectionState.Open)
+                conn.Close();
             }
         }
         // DataGridView'e tıklandığında bilgileri TextBox ve ComboBox'a doldur
@@ -89,7 +118,7 @@ namespace SQLDENEME
 
                 // ComboBox'ları temizle
                 comboBox1.Items.Clear();
-               comboBox2.Items.Clear();
+                comboBox2.Items.Clear();
 
                 // Her kategori için comboBox'lara ekleme yap
                 while (dr.Read())
@@ -136,40 +165,36 @@ namespace SQLDENEME
                     // Veritabanı bağlantısını aç
                     conn.Open();
 
-                    // SQL Insert komutu
+                    // SQL Insert komutu ve SCOPE_IDENTITY() ile eklenen ID'yi alma
                     SqlCommand ekle = new SqlCommand(
-                        "INSERT INTO Tbl_Tarifler (TarifAdi, Kategori, HazirlanmaSuresi, Talimatlar)" +
-                        " VALUES (@TarifAdi, @Kategori, @HazirlanmaSuresi, @Talimatlar)", conn
+                        "INSERT INTO Tbl_Tarifler (TarifAdi, Kategori, HazirlanmaSuresi, Talimatlar) " +
+                        "VALUES (@TarifAdi, @Kategori, @HazirlanmaSuresi, @Talimatlar); " +
+                        "SELECT SCOPE_IDENTITY();", conn
                     );
 
                     // Parametreleri ekle
-                    ekle.Parameters.AddWithValue("@TarifAdi", textBox4.Text); // Tarif Adı
-                    ekle.Parameters.AddWithValue("@Kategori", comboBox1.SelectedItem?.ToString() ?? ""); // Kategori
-                    ekle.Parameters.AddWithValue("@HazirlanmaSuresi", textBox5.Text); // Hazırlanma Süresi
-                    ekle.Parameters.AddWithValue("@Talimatlar", textBox6.Text); // Talimatlar
+                    ekle.Parameters.AddWithValue("@TarifAdi", textBox4.Text);
+                    ekle.Parameters.AddWithValue("@Kategori", comboBox1.SelectedItem?.ToString() ?? "");
+                    ekle.Parameters.AddWithValue("@HazirlanmaSuresi", textBox5.Text);
+                    ekle.Parameters.AddWithValue("@Talimatlar", textBox6.Text);
 
-                    // Komutu çalıştır
-                    int basari = ekle.ExecuteNonQuery();
+                    // ID'yi al ve Form5'e gönder
+                    int tarifID = Convert.ToInt32(ekle.ExecuteScalar());
 
-                    // İşlem başarılı olduysa
-                    if (basari > 0)
-                    {
-                        MessageBox.Show("Kayıt başarıyla eklendi", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Kayıt başarıyla eklendi", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // TextBox ve ComboBox temizlenir
-                        textBox4.Text = "";
-                        comboBox1.SelectedIndex = -1; // ComboBox'ı temizlemek için
-                        textBox5.Text = "";
-                        textBox6.Text = "";
-                    }
-                    else
-                    {
-                        MessageBox.Show("Kayıt eklenirken bir hata oluştu", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    // Form5 nesnesini göster
+                    Form5 malzemesecin = new Form5(tarifID);
+                    malzemesecin.ShowDialog();
+
+                    // TextBox ve ComboBox temizlenir
+                    textBox4.Text = "";
+                    comboBox1.SelectedIndex = -1;
+                    textBox5.Text = "";
+                    textBox6.Text = "";
                 }
                 catch (SqlException edf)
                 {
-                    // SQL hatasını yakala ve göster
                     MessageBox.Show("Hata oluştu: " + edf.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 finally
@@ -180,6 +205,8 @@ namespace SQLDENEME
                         conn.Close();
                     }
                 }
+
+
             }
         }
 
@@ -213,7 +240,7 @@ namespace SQLDENEME
                 if (etkilenenSatir > 0)
                 {
                     MessageBox.Show("Güncelleme başarılı.");
-                    listele(); // Güncelleme sonrası listeyi yenile
+                    Tariflistele(); // Güncelleme sonrası listeyi yenile
                 }
                 else
                 {
@@ -247,7 +274,7 @@ namespace SQLDENEME
                     if (silinenSatir > 0)
                     {
                         MessageBox.Show("Kayıt başarıyla silindi.");
-                        listele(); // Tabloyu güncellemek için tekrar listele
+                        Tariflistele(); // Tabloyu güncellemek için tekrar listele
                     }
                     else
                     {
@@ -271,51 +298,51 @@ namespace SQLDENEME
 
         private void comboBox3_SelectedIndexChanged(object sender, EventArgs e)
         {
-           
-                // Kullanıcının seçtiği sıralama kriterine göre SQL sorgusu
-                string sortQuery = "";
 
-                switch (comboBox3.SelectedItem.ToString())
-                {
-                    case "Hazırlama Süresi (Artan)":
-                        sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY HazirlanmaSuresi ASC"; 
-                        break;
+            // Kullanıcının seçtiği sıralama kriterine göre SQL sorgusu
+            string sortQuery = "";
 
-                    case "Hazırlama Süresi (Azalan)":
-                        sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY HazirlanmaSuresi DESC";
-                        break;
+            switch (comboBox3.SelectedItem.ToString())
+            {
+                case "Hazırlama Süresi (Artan)":
+                    sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY HazirlanmaSuresi ASC";
+                    break;
 
-                    case "Tarif Maliyeti (Artan)":
-                        sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY TarifMaliyeti ASC";
-                        break;
+                case "Hazırlama Süresi (Azalan)":
+                    sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY HazirlanmaSuresi DESC";
+                    break;
 
-                    case "Tarif Maliyeti (Azalan)":
-                        sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY TarifMaliyeti DESC";
-                        break;
+                case "Tarif Maliyeti (Artan)":
+                    sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY TarifMaliyeti ASC";
+                    break;
 
-                    default:
-                        sortQuery = "SELECT * FROM Tbl_Tarifler"; // Varsayılan, eğer bir şey seçilmezse
-                        break;
-                }
+                case "Tarif Maliyeti (Azalan)":
+                    sortQuery = "SELECT * FROM Tbl_Tarifler ORDER BY TarifMaliyeti DESC";
+                    break;
 
-                // Sıralama sorgusunu çalıştırma ve DataGridView'e verileri yükleme
-                try
-                {
-                    conn.Open();
-                    SqlDataAdapter adtr = new SqlDataAdapter(sortQuery, conn);
-                    DataTable dt = new DataTable();
-                    adtr.Fill(dt);
-                    dataGridView1.DataSource = dt;
-                }
-                catch (SqlException ex)
-                {
-                    MessageBox.Show("Hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                finally
-                {
-                    conn.Close();
-                }
-            
+                default:
+                    sortQuery = "SELECT * FROM Tbl_Tarifler"; // Varsayılan, eğer bir şey seçilmezse
+                    break;
+            }
+
+            // Sıralama sorgusunu çalıştırma ve DataGridView'e verileri yükleme
+            try
+            {
+                conn.Open();
+                SqlDataAdapter adtr = new SqlDataAdapter(sortQuery, conn);
+                DataTable dt = new DataTable();
+                adtr.Fill(dt);
+                dataGridView1.DataSource = dt;
+            }
+            catch (SqlException ex)
+            {
+                MessageBox.Show("Hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                conn.Close();
+            }
+
         }
 
         private void textBox7_TextChanged(object sender, EventArgs e)
@@ -351,6 +378,9 @@ namespace SQLDENEME
                 conn.Close(); // Bağlantıyı kapat
             }
         }
+
+
+
 
     }
 }
