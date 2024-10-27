@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace SQLDENEME
@@ -13,14 +14,22 @@ namespace SQLDENEME
         public Form1()
         {
             InitializeComponent();
+          
             LoadTariflerToGrid(); // Form yüklendiğinde tarifleri yükle
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            dataGridView1.CellContentClick += dataGridView1_CellContentClick;
-        }
+          dataGridView1.CellContentClick += dataGridView1_CellContentClick;
+            Bitmap cursorBitmap = new Bitmap("C:\\Users\\Asus\\Desktop\\kepce_ikon.cur"); // custom_cursor.png dosyasını projenize eklemeyi unutmayın
 
+            // 2. Bitmap'ten bir Cursor nesnesi oluştur
+            Cursor customCursor = new Cursor(cursorBitmap.GetHicon());
+
+            // 3. Cursor'u form üzerinde kullan
+            this.Cursor = customCursor;
+        }
+ 
         private void button1_Click(object sender, EventArgs e)
         {
             Form2 menu = new Form2();
@@ -54,7 +63,16 @@ namespace SQLDENEME
                     {
                         int tarifID = Convert.ToInt32(row["TarifID"]);
                         float maliyet = HesaplaToplamMaliyet(tarifID);
-                        row["Maliyet"] = maliyet.ToString("0.00") + " TL";
+
+                        // Eğer maliyet -1 değilse ekle
+                        if (maliyet != -1)
+                        {
+                            row["Maliyet"] = maliyet.ToString("0.00") + " TL";
+                        }
+                        else
+                        {
+                            row["Maliyet"] = "Hata";
+                        }
                     }
 
                     // DataGridView'e veriyi bağla
@@ -71,6 +89,7 @@ namespace SQLDENEME
                 }
             }
         }
+
 
         private float HesaplaToplamMaliyet(int selectedTarifID)
         {
@@ -218,9 +237,9 @@ namespace SQLDENEME
 
         private void ShowTarifDetails(int tarifID)
         {
-            using (SqlConnection connection = new SqlConnection(conn.ConnectionString))
+            using (SqlConnection connection = new SqlConnection("Data Source=DESKTOP-PMBMQKM\\SQLEXPRESS;Initial Catalog=Yazlab;Integrated Security=True;"))
             {
-                string query = "SELECT TarifAdi, HazirlanmaSuresi FROM Tbl_Tarifler WHERE TarifID = @TarifID";
+                string query = "SELECT TarifAdi, HazirlanmaSuresi, ResimYolu FROM Tbl_Tarifler WHERE TarifID = @TarifID";
                 SqlCommand command = new SqlCommand(query, connection);
                 command.Parameters.AddWithValue("@TarifID", tarifID);
 
@@ -231,13 +250,15 @@ namespace SQLDENEME
 
                     if (reader.Read())
                     {
+                        // Veritabanından tarif bilgilerini alıyoruz
                         string tarifAdi = reader["TarifAdi"].ToString();
                         string hazirlanmaSuresi = reader["HazirlanmaSuresi"].ToString();
                         float maliyet = HesaplaToplamMaliyet(tarifID);
+                        string resimYolu = reader["ResimYolu"].ToString(); // Resim yolunu veritabanından al
 
-                        MessageBox.Show($"Tarif Adı: {tarifAdi}\n" +
-                                        $"Hazırlanma Süresi: {hazirlanmaSuresi} dakika\n" +
-                                        $"Toplam Maliyet: {maliyet.ToString("0.00")} TL");
+                        // Tarif detaylarını göstermek için yeni bir form aç ve parametreleri gönder
+                        TarifDetayForm detayForm = new TarifDetayForm(tarifAdi, hazirlanmaSuresi, maliyet, resimYolu);
+                        detayForm.ShowDialog();
                     }
                     else
                     {
@@ -250,6 +271,20 @@ namespace SQLDENEME
                     MessageBox.Show("Tarif bilgileri yüklenirken hata: " + ex.Message);
                 }
             }
+        }
+
+
+
+
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }

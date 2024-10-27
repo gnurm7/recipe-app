@@ -84,14 +84,22 @@ namespace SQLDENEME
 
             // Dinamik SQL sorgusu oluştur
             string query = $@"
-                SELECT T.TarifID, T.TarifAdi, T.Kategori, T.HazirlanmaSuresi,
-                       COUNT(DISTINCT TM.MalzemeID) * 100.0 / {seciliMalzemeler.Count} AS EslesmeYuzdesi
-                FROM Tbl_Tarifler T
-                INNER JOIN Tbl_TarifMalzeme_iliskisi TM ON T.TarifID = TM.TarifID
-                WHERE TM.MalzemeID IN ({string.Join(",", seciliMalzemeler.Select((_, i) => $"@MalzemeId{i}"))})
-                GROUP BY T.TarifID, T.TarifAdi, T.Kategori, T.HazirlanmaSuresi
-                HAVING COUNT(DISTINCT TM.MalzemeID) > 0
-                ORDER BY EslesmeYuzdesi DESC";
+    SELECT T.TarifID, T.TarifAdi, T.Kategori, T.HazirlanmaSuresi,
+           COUNT(DISTINCT TM.MalzemeID) * 100.0 / {seciliMalzemeler.Count} AS EslesmeYuzdesi,
+           (SELECT SUM(M2.BirimFiyat * TM2.MalzemeMiktar)
+            FROM Tbl_Malzemeler M2
+            INNER JOIN Tbl_TarifMalzeme_iliskisi TM2 ON M2.MalzemeID = TM2.MalzemeID
+            WHERE TM2.TarifID = T.TarifID
+            AND M2.MalzemeID NOT IN ({string.Join(",", seciliMalzemeler.Select((_, i) => $"@MalzemeId{i}"))})
+           ) AS ToplamKullanilmayanMaliyet
+    FROM Tbl_Tarifler T
+    INNER JOIN Tbl_TarifMalzeme_iliskisi TM ON T.TarifID = TM.TarifID
+    INNER JOIN Tbl_Malzemeler M ON TM.MalzemeID = M.MalzemeID
+    WHERE TM.MalzemeID IN ({string.Join(",", seciliMalzemeler.Select((_, i) => $"@MalzemeId{i}"))})
+    GROUP BY T.TarifID, T.TarifAdi, T.Kategori, T.HazirlanmaSuresi
+    HAVING COUNT(DISTINCT TM.MalzemeID) > 0
+    ORDER BY EslesmeYuzdesi DESC";
+
 
             try
             {
