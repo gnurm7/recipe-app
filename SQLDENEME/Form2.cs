@@ -161,37 +161,49 @@ namespace SQLDENEME
             else
             {
                 try
-                {
+                {//duplicate
                     // Veritabanı bağlantısını aç
                     conn.Open();
+                    SqlCommand kontrol = new SqlCommand("SELECT COUNT(*) FROM Tbl_Tarifler WHERE TarifAdi = @TarifAdi AND Kategori = @Kategori", conn);
+                    kontrol.Parameters.AddWithValue("@TarifAdi", textBox4.Text);
+                    kontrol.Parameters.AddWithValue("@Kategori", comboBox1.SelectedItem?.ToString() ?? "");
 
-                    // SQL Insert komutu ve SCOPE_IDENTITY() ile eklenen ID'yi alma
-                    SqlCommand ekle = new SqlCommand(
+                    int count = (int)kontrol.ExecuteScalar();
+
+                    if (count > 0)
+                    {
+                        MessageBox.Show("Bu tarif adı ve kategori zaten mevcut. Lütfen başka bir tarif adı girin.", "Duplicate Uyarısı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        // SQL Insert komutu ve SCOPE_IDENTITY() ile eklenen ID'yi alma
+                        SqlCommand ekle = new SqlCommand(
                         "INSERT INTO Tbl_Tarifler (TarifAdi, Kategori, HazirlanmaSuresi, Talimatlar) " +
                         "VALUES (@TarifAdi, @Kategori, @HazirlanmaSuresi, @Talimatlar); " +
                         "SELECT SCOPE_IDENTITY();", conn
                     );
 
-                    // Parametreleri ekle
-                    ekle.Parameters.AddWithValue("@TarifAdi", textBox4.Text);
-                    ekle.Parameters.AddWithValue("@Kategori", comboBox1.SelectedItem?.ToString() ?? "");
-                    ekle.Parameters.AddWithValue("@HazirlanmaSuresi", textBox5.Text);
-                    ekle.Parameters.AddWithValue("@Talimatlar", textBox6.Text);
+                        // Parametreleri ekle
+                        ekle.Parameters.AddWithValue("@TarifAdi", textBox4.Text);
+                        ekle.Parameters.AddWithValue("@Kategori", comboBox1.SelectedItem?.ToString() ?? "");
+                        ekle.Parameters.AddWithValue("@HazirlanmaSuresi", textBox5.Text);
+                        ekle.Parameters.AddWithValue("@Talimatlar", textBox6.Text);
 
-                    // ID'yi al ve Form5'e gönder
-                    int tarifID = Convert.ToInt32(ekle.ExecuteScalar());
+                        // ID'yi al ve Form5'e gönder
+                        int tarifID = Convert.ToInt32(ekle.ExecuteScalar());
 
-                    MessageBox.Show("Kayıt başarıyla eklendi", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("Kayıt başarıyla eklendi", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // Form5 nesnesini göster
-                    Form5 malzemesecin = new Form5(tarifID);
-                    malzemesecin.ShowDialog();
+                        // Form5 nesnesini göster
+                        Form5 malzemesecin = new Form5(tarifID);
+                        malzemesecin.ShowDialog();
 
-                    // TextBox ve ComboBox temizlenir
-                    textBox4.Text = "";
-                    comboBox1.SelectedIndex = -1;
-                    textBox5.Text = "";
-                    textBox6.Text = "";
+                        // TextBox ve ComboBox temizlenir
+                        textBox4.Text = "";
+                        comboBox1.SelectedIndex = -1;
+                        textBox5.Text = "";
+                        textBox6.Text = "";
+                    }
                 }
                 catch (SqlException edf)
                 {
@@ -266,10 +278,16 @@ namespace SQLDENEME
                     int tarifID = Convert.ToInt32(dataGridView1.CurrentRow.Cells["TarifID"].Value);
 
                     conn.Open();
-                    SqlCommand sil = new SqlCommand("DELETE FROM Tbl_Tarifler WHERE TarifID = @TarifID", conn);
-                    sil.Parameters.AddWithValue("@TarifID", tarifID);
 
-                    int silinenSatir = sil.ExecuteNonQuery();
+                    // İlk olarak Tbl_TarifMalzeme_iliskisi tablosunda ilişkili kayıtları sil
+                    SqlCommand silMalzemeler = new SqlCommand("DELETE FROM Tbl_TarifMalzeme_iliskisi WHERE TarifID = @TarifID", conn);
+                    silMalzemeler.Parameters.AddWithValue("@TarifID", tarifID);
+                    silMalzemeler.ExecuteNonQuery();
+
+                    // Ardından Tbl_Tarifler tablosundaki kaydı sil
+                    SqlCommand silTarif = new SqlCommand("DELETE FROM Tbl_Tarifler WHERE TarifID = @TarifID", conn);
+                    silTarif.Parameters.AddWithValue("@TarifID", tarifID);
+                    int silinenSatir = silTarif.ExecuteNonQuery();
 
                     if (silinenSatir > 0)
                     {
@@ -295,6 +313,7 @@ namespace SQLDENEME
                 MessageBox.Show("Lütfen silmek için bir tarif seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+
 
         private void comboBox3_SelectedIndexChanged(object sender, EventArgs e)
         {
