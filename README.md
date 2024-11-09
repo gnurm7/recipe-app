@@ -1,1 +1,1 @@
-# YEMEK TRİFLERİ UYGULAMASI
+# Recipes App
