@@ -3,8 +3,7 @@
 ## Kocaeli Üniversitesi  
 ### Bilgisayar Mühendisliği Bölümü  
 ### Yazılım Lab. I - I. Proje  
-
-**Proje Teslim Tarihi:** 24.10.2024  
+ 
 
 ---  
 
