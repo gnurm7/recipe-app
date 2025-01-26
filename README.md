@@ -72,3 +72,4 @@ Tablolar, veritabanı normalizasyon kurallarına göre tasarlanacaktır. Tarif-M
 
 ### Filtreleme ve Sıralama  
 - Kullanıcı, tarifleri hazırlama süresine veya maliyetine göre filtreleyebilir
+![entry](https://github.com/user-attachments/assets/51f46f2b-664d-4344-a59f-97067ad4f2c5)
